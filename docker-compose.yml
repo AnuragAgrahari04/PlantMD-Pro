@@ -1,0 +1,77 @@
+version: "3.9"
+
+services:
+  # ── Backend API ──────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - REDIS_URL=redis://redis:6379/0
+      - MODEL_PATH=/app/models/plantmd_efficientnet.h5
+      - LABELS_PATH=/app/models/labels.json
+      - LOG_JSON=false
+    volumes:
+      - ./models:/app/models:ro
+      - ./logs:/app/logs
+      - ./backend:/app        # Hot reload in dev
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ── Streamlit Frontend ───────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - API_BASE_URL=http://api:8000
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # ── Redis Cache ───────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Redis Commander (Dev UI for Redis) ───────────────────────────────────────
+  redis-ui:
+    image: rediscommander/redis-commander:latest
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    depends_on:
+      - redis
+    profiles:
+      - dev
+
+volumes:
+  redis_data:
+
+networks:
+  default:
+    name: plantmd_network

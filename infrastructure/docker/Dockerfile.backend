@@ -1,0 +1,47 @@
+# ── Stage 1: Builder ─────────────────────────────────────────────────────────
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ libgl1-mesa-glx libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+
+# ── Stage 2: Runtime ─────────────────────────────────────────────────────────
+FROM python:3.11-slim AS runtime
+
+# Security: non-root user
+RUN groupadd -r plantmd && useradd -r -g plantmd plantmd
+
+WORKDIR /app
+
+# Copy installed packages from builder
+COPY --from=builder /install /usr/local
+
+# Runtime dependencies only
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1-mesa-glx libglib2.0-0 curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy application code
+COPY backend/ ./
+
+# Create directories
+RUN mkdir -p uploads models logs && \
+    chown -R plantmd:plantmd /app
+
+USER plantmd
+
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8000/health/live || exit 1
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
