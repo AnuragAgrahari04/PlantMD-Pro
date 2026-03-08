@@ -1,4 +1,4 @@
-# 🌿 PlantMD Pro — Industry-Level Plant Disease Detection System
+<img width="1892" height="1091" alt="image" src="https://github.com/user-attachments/assets/dd9be48c-24cb-48cc-b241-d095a3adc7cd" /># 🌿 PlantMD Pro — Industry-Level Plant Disease Detection System
 
 [![CI/CD](https://github.com/your-org/plantmd-pro/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/plantmd-pro/actions)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://python.org)
@@ -8,6 +8,8 @@
 
 A production-grade plant disease classification system powered by **EfficientNetV2** deep learning.
 Built with FastAPI, Streamlit, Redis caching, JWT auth, Grad-CAM explainability, and Docker.
+
+LIVE DEMO : https://plantmd-pro-042004.streamlit.app
 
 ---
 
